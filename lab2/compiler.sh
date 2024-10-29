@@ -1,6 +1,6 @@
 #!/bin/bash
 
-g++ *.cpp -o program.out && ./program.out
+g++ *.cpp *.hpp -o program.out && ./program.out
 
 
 # run: bash ./compiler.sh
