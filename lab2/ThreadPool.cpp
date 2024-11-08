@@ -4,7 +4,7 @@ void ThreadPool::run()
 {
     while (true)
     {
-        std::function<void()> task;
+        std::function<void(int)> task;
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
@@ -16,12 +16,12 @@ void ThreadPool::run()
             tasks.pop();
         }
 
-        task();
+        task(0);
     }
 }
 
 // Метод для добавления задачи в пул и получения результата через future
-std::future<void> ThreadPool::enqueue(std::function<void()> task)
+std::future<void> ThreadPool::enqueue(std::function<void(int)> task)
 {
     auto taskPtr = std::make_shared<std::packaged_task<void(int)>>(std::move(task));
     std::future<void> res = taskPtr->get_future();

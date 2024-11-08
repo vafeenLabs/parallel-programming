@@ -24,14 +24,14 @@ public:
     ThreadPool &operator=(ThreadPool &&) = delete;
 
     // Метод для добавления задачи в пул и получения результата через future
-    std::future<void> enqueue(std::function<void()> task);
+    std::future<void> enqueue(std::function<void(int)> task);
 
 private:
     // Метод, который выполняется в каждом потоке
     void run();
 
     std::vector<std::thread> workers;           // Вектор рабочих потоков
-    std::queue<std::function<void()>> tasks; // Очередь задач
+    std::queue<std::function<void(int)>> tasks; // Очередь задач
     std::mutex queueMutex;                      // Мьютекс для защиты очереди задач
     std::condition_variable condition;          // Условная переменная для синхронизации
     bool stop;                                  // Флаг остановки пула потоков
