@@ -42,7 +42,7 @@ int main()
             std::cin >> n;
 
             // Выполняем расчет числа Фибоначчи в отдельном потоке
-            pool.enqueue([n](int)
+            pool.enqueue([n]()
                          {
                 long long fibResult = fibonacci(n);
                 std::cout << "Число Фибоначчи для " << n << ": " << fibResult << std::endl; });
@@ -57,7 +57,7 @@ int main()
             std::getline(std::cin, content);
 
             // Записываем текст в файл в отдельном потоке
-            pool.enqueue([filename, content](int)
+            pool.enqueue([filename, content]()
                          { writeToFile(filename, content); });
         }
         else if (choice == 3)
