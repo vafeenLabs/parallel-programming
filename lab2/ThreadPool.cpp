@@ -10,6 +10,7 @@ void ThreadPool::run()
                        { return stop || !tasks.empty(); });
         if (stop && tasks.empty())
             return;
+        lock.unlock();
         std::function<void()> task = std::move(tasks.front());
         tasks.pop();
         task();
