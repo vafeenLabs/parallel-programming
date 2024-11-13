@@ -1,21 +1,31 @@
 #include "ThreadPool.hpp"
 
-// Метод, выполняющий задачи в потоках
 void ThreadPool::run()
 {
     while (true)
     {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        condition.wait(lock, [this]
-                       { return stop || !tasks.empty(); });
-        if (stop && tasks.empty())
-            return;
-        lock.unlock();
-        std::function<void()> task = std::move(tasks.front());
-        tasks.pop();
-        task();
+        std::function<void()> task;
+        
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            condition.wait(lock, [this]
+                           { return stop || !tasks.empty(); });
+            if (stop && tasks.empty())
+                return;
+            if (!tasks.empty())
+            {
+                task = std::move(tasks.front());
+                tasks.pop();
+            }
+        }
+
+        if (task)
+        {
+            task();
+        }
     }
 }
+
 
 // Метод для добавления задачи в пул и получения результата через future
 std::future<void> ThreadPool::enqueue(std::function<void()> task)
