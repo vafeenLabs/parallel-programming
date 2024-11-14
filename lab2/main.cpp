@@ -1,15 +1,15 @@
 #include "ThreadPool.hpp"
 
-// Функция для расчета числа Фибоначчи рекурсивно
+// Функция для расчета числа Фибоначчи
 long long fibonacci(int n)
 {
     if (n <= 2)
-        return n;
+        return 1;
     else
         return fibonacci(n - 1) + fibonacci(n - 2);
 }
 
-// Функция записи текста в файл с указанным именем
+// Функция записи текста в файл
 void writeToFile(const std::string &filename, const std::string &content)
 {
     std::ofstream file(filename);
@@ -27,27 +27,26 @@ void writeToFile(const std::string &filename, const std::string &content)
 
 int main()
 {
-    ThreadPool pool; // Создание пула потоков, число потоков по умолчанию определяется аппаратными возможностями
+    ThreadPool pool;
 
     int choice;
     while (true)
     {
         std::cout << "Выберите команду (1: Фибоначчи, 2: Запись в файл, 3: Выход): ";
         std::cin >> choice;
-    
-        if (choice == 1)
+
+        if (choice == FIBONACHI_CHOICE)
         {
             int n;
             std::cout << "Введите число для расчета Фибоначчи: ";
             std::cin >> n;
 
-            // Выполняем расчет числа Фибоначчи в отдельном потоке
-            pool.enqueue([n](int)
+            pool.enqueue([n]()
                          {
                 long long fibResult = fibonacci(n);
                 std::cout << "Число Фибоначчи для " << n << ": " << fibResult << std::endl; });
         }
-        else if (choice == 2)
+        else if (choice == FILE_WRITING_CHOICE)
         {
             std::string filename, content;
             std::cout << "Введите имя файла: ";
@@ -56,11 +55,10 @@ int main()
             std::cout << "Введите текст для записи в файл: ";
             std::getline(std::cin, content);
 
-            // Записываем текст в файл в отдельном потоке
-            pool.enqueue([filename, content](int)
+            pool.enqueue([filename, content]()
                          { writeToFile(filename, content); });
         }
-        else if (choice == 3)
+        else if (choice == EXIT_CHOICE)
         {
             break;
         }
