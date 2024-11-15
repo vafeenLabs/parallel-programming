@@ -1,9 +1,8 @@
 # Компилятор C++
 CXX = g++
 
-# -pthread поддержка многопоточности
 # -O2: уровень оптимизации 2 для улучшения производительности
-CXXFLAGS = -std=c++11 -pthread -O2
+CXXFLAGS = -std=c++11 -O2
 
 # Указываем исходные файлы проекта
 SRCS = main.cpp ThreadPool.cpp
