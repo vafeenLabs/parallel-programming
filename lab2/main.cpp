@@ -24,15 +24,15 @@ void writeToFile(const std::string &filename, const std::string &content)
         std::cerr << "Не удалось открыть файл для записи!" << std::endl;
     }
 }
-
+// Основная функция программы
 int main()
 {
-    ThreadPool pool;
-
+    ThreadPool pool; // Предполагается, что класс ThreadPool уже реализован
     int choice;
+
     while (true)
     {
-        std::cout << "Выберите команду (1: Фибоначчи, 2: Запись в файл, 3: Выход): ";
+        std::cout << "Выберите команду (1: Фибоначчи, 2: Запись в файл, 3: Выход, 4: Описание работы программы): ";
         std::cin >> choice;
 
         if (choice == FIBONACHI_CHOICE)
@@ -40,7 +40,7 @@ int main()
             int n;
             std::cout << "Введите число для расчета Фибоначчи: ";
             std::cin >> n;
-            std::cout << "Начали рассчет числа фибоначи под номером " << n << ", ожидайте\n";
+            std::cout << "Начали расчет числа Фибоначчи под номером " << n << ", ожидайте. А пока можете воспользоваться файловым вводом или посчитать еще одно число\n";
             pool.enqueue([n]()
                          {
                 long long fibResult = fibonacci(n);
@@ -57,6 +57,14 @@ int main()
 
             pool.enqueue([filename, content]()
                          { writeToFile(filename, content); });
+        }
+        else if (choice == DESCRIPTION_CHOICE)
+        {
+            std::cout << "Описание работы программы:\n";
+            std::cout << "Данная программа демонстрирует работу многопоточности.\n";
+            std::cout << "Вы можете одновременно рассчитывать число Фибоначчи и записывать данные в файл.\n";
+            std::cout << "Во время вычисления числа Фибоначчи вы можете продолжать взаимодействовать с программой.\n";
+            std::cout << "Когда расчет числа Фибоначчи завершится, результат будет выведен на экран.\n";
         }
         else if (choice == EXIT_CHOICE)
         {

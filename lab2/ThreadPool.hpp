@@ -11,7 +11,7 @@
 #define FIBONACHI_CHOICE 1 
 #define FILE_WRITING_CHOICE 2 
 #define EXIT_CHOICE 3 
-
+#define DESCRIPTION_CHOICE 4
 
 // Класс ThreadPool для управления пулом потоков
 class ThreadPool
