@@ -27,15 +27,17 @@ void writeToFile(const std::string &filename, const std::string &content)
 
 int main()
 {
-    ThreadPool pool; 
+    ThreadPool pool;
     int choice;
-
-    while (true)
+    bool program = true;
+    while (program)
     {
         std::cout << "Выберите команду (1: Фибоначчи, 2: Запись в файл, 3: Выход, 4: Описание работы программы): ";
         std::cin >> choice;
 
-        if (choice == FIBONACHI_CHOICE)
+        switch (choice)
+        {
+        case FIBONACHI_CHOICE:
         {
             int n;
             std::cout << "Введите число для расчета Фибоначчи: ";
@@ -45,8 +47,9 @@ int main()
                          {
                 long long fibResult = fibonacci(n);
                 std::cout << "Число Фибоначчи для " << n << ": " << fibResult << std::endl; });
+            break;
         }
-        else if (choice == FILE_WRITING_CHOICE)
+        case FILE_WRITING_CHOICE:
         {
             std::string filename, content;
             std::cout << "Введите имя файла: ";
@@ -57,22 +60,27 @@ int main()
 
             pool.enqueue([filename, content]()
                          { writeToFile(filename, content); });
+            break;
         }
-        else if (choice == DESCRIPTION_CHOICE)
+        case DESCRIPTION_CHOICE:
         {
             std::cout << "Описание работы программы:\n";
             std::cout << "Данная программа демонстрирует работу многопоточности.\n";
             std::cout << "Вы можете одновременно рассчитывать число Фибоначчи и записывать данные в файл.\n";
             std::cout << "Во время вычисления числа Фибоначчи вы можете продолжать взаимодействовать с программой.\n";
             std::cout << "Когда расчет числа Фибоначчи завершится, результат будет выведен на экран.\n";
-        }
-        else if (choice == EXIT_CHOICE)
-        {
             break;
         }
-        else
+        case EXIT_CHOICE:
+        {
+            program = false;
+            break;
+        }
+        default:
         {
             std::cout << "Неверная команда!" << std::endl;
+            break;
+        }
         }
     }
 
