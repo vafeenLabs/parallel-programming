@@ -40,7 +40,7 @@ int main()
             int n;
             std::cout << "Введите число для расчета Фибоначчи: ";
             std::cin >> n;
-
+            std::cout << "Начали рассчет числа фибоначи под номером " << n << ", ожидайте\n";
             pool.enqueue([n]()
                          {
                 long long fibResult = fibonacci(n);
