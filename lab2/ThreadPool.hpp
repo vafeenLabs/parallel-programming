@@ -8,10 +8,14 @@
 #include <mutex>
 #include <condition_variable>
 
-#define FIBONACHI_CHOICE 1 
-#define FILE_WRITING_CHOICE 2 
-#define EXIT_CHOICE 3 
-#define DESCRIPTION_CHOICE 4
+enum Point
+{
+    FIBONACHI_CHOICE = 1,
+    FILE_WRITING_CHOICE,
+    EXIT_CHOICE,
+    DESCRIPTION_CHOICE,
+
+};
 
 // Класс ThreadPool для управления пулом потоков
 class ThreadPool
@@ -35,9 +39,9 @@ private:
     // Метод, выполняющий задачи в потоках
     void run();
 
-    std::vector<std::thread> workers;           // Вектор рабочих потоков
+    std::vector<std::thread> workers;        // Вектор рабочих потоков
     std::queue<std::function<void()>> tasks; // Очередь задач
-    std::mutex queueMutex;                      // Мьютекс для защиты очереди задач
-    std::condition_variable condition;          // Условная переменная для синхронизации
-    bool stop;                                  // Флаг остановки пула потоков
+    std::mutex queueMutex;                   // Мьютекс для защиты очереди задач
+    std::condition_variable condition;       // Условная переменная для синхронизации
+    bool stop;                               // Флаг остановки пула потоков
 };
