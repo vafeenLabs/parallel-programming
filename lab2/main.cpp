@@ -24,10 +24,10 @@ void writeToFile(const std::string &filename, const std::string &content)
         std::cerr << "Не удалось открыть файл для записи!" << std::endl;
     }
 }
-// Основная функция программы
+
 int main()
 {
-    ThreadPool pool; // Предполагается, что класс ThreadPool уже реализован
+    ThreadPool pool; 
     int choice;
 
     while (true)
