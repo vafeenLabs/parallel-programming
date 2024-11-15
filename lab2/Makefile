@@ -31,8 +31,10 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -c $<
 
 # Правило для удаления объектных файлов после сборки
-clean_objs:
+clean:
 	# Удаляем все объектные файлы
 	rm -f $(OBJS)
+	# Удаляем файл программы 
+	rm -f ./lab2 
 
-.PHONY: all clean_objs
+.PHONY: all clean
