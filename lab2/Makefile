@@ -19,7 +19,7 @@ OBJS = $(SRCS:.cpp=.o)
 TARGET = lab2
 
 # Основная цель сборки
-all: $(TARGET) clean_objs
+all: $(TARGET)
 
 # Правило для создания исполняемого файла из объектных файлов
 $(TARGET): $(OBJS)
