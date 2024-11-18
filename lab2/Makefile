@@ -1,9 +1,8 @@
 # Компилятор C++
 CXX = g++
 
-# -pthread поддержка многопоточности
 # -O2: уровень оптимизации 2 для улучшения производительности
-CXXFLAGS = -std=c++11 -pthread -O2
+CXXFLAGS = -std=c++11 -O2
 
 # Указываем исходные файлы проекта
 SRCS = main.cpp ThreadPool.cpp
@@ -19,7 +18,7 @@ OBJS = $(SRCS:.cpp=.o)
 TARGET = lab2
 
 # Основная цель сборки
-all: $(TARGET) clean_objs
+all: $(TARGET)
 
 # Правило для создания исполняемого файла из объектных файлов
 $(TARGET): $(OBJS)
@@ -32,8 +31,10 @@ $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -c $<
 
 # Правило для удаления объектных файлов после сборки
-clean_objs:
+clean:
 	# Удаляем все объектные файлы
 	rm -f $(OBJS)
+	# Удаляем файл программы 
+	rm -f ./lab2 
 
-.PHONY: all clean_objs
+.PHONY: all clean
