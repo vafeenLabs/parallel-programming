@@ -1,12 +1,19 @@
+#pragma once 
 #include <iostream>
 #include <fstream>
 #include <vector>
-#include <thread>
 #include <queue>
 #include <functional>
 #include <future>
 #include <mutex>
 #include <condition_variable>
+#include <stdexcept>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
 
 enum Point
 {
@@ -34,14 +41,24 @@ public:
 
     // Метод для добавления задачи в пул и получения результата через future
     std::future<void> enqueue(std::function<void()> task);
-
 private:
-    // Метод, выполняющий задачи в потоках
+
     void run();
 
-    std::vector<std::thread> workers;        // Вектор рабочих потоков
-    std::queue<std::function<void()>> tasks; // Очередь задач
-    std::mutex queueMutex;                   // Мьютекс для защиты очереди задач
-    std::condition_variable condition;       // Условная переменная для синхронизации
-    bool stop;                               // Флаг остановки пула потоков
+    std::queue<std::function<void()>> tasks;
+
+    bool stop;
+
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
+    // Для POSIX: массив идентификаторов потоков pthread
+    std::vector<pthread_t> workers;
+
+    // Мьютекс для синхронизации потоков и очереди
+    pthread_mutex_t pthreadMutex;
+
+    // Условная переменная для потоков (POSIX)
+    pthread_cond_t pthreadCond;
+#endif
 };

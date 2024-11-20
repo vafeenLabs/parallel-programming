@@ -2,65 +2,113 @@
 
 void ThreadPool::run()
 {
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
     while (true)
     {
         std::function<void()> task;
-        
+
         {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            condition.wait(lock, [this]
-                           { return stop || !tasks.empty(); });
-            if (stop && tasks.empty())
+            pthread_mutex_lock(&pthreadMutex);
+            while (!stop && tasks.empty())
+                pthread_cond_wait(&pthreadCond, &pthreadMutex);
+            if (stop && tasks.empty()) 
+            {
+                pthread_mutex_unlock(&pthreadMutex);
                 return;
+            }
             if (!tasks.empty())
             {
                 task = std::move(tasks.front());
                 tasks.pop();
             }
+            pthread_mutex_unlock(&pthreadMutex);
         }
 
         if (task)
-        {
             task();
-        }
     }
+#endif
 }
 
-
-// Метод для добавления задачи в пул и получения результата через future
 std::future<void> ThreadPool::enqueue(std::function<void()> task)
 {
     auto taskPtr = std::make_shared<std::packaged_task<void()>>(std::move(task));
     std::future<void> res = taskPtr->get_future();
 
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
     {
-        std::lock_guard<std::mutex> lock(queueMutex);
+        pthread_mutex_lock(&pthreadMutex);
         if (stop)
+        {
+
+            pthread_mutex_unlock(&pthreadMutex);
             throw std::runtime_error("enqueue on stopped ThreadPool");
+        }
         tasks.emplace([taskPtr]()
                       { (*taskPtr)(); });
+        pthread_mutex_unlock(&pthreadMutex);
     }
-    condition.notify_one();
+    pthread_cond_signal(&pthreadCond);
+#endif
+
     return res;
 }
 
-// Конструктор для инициализации пула потоков с заданным количеством потоков
 ThreadPool::ThreadPool(size_t threads) : stop(false)
 {
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
+    pthread_mutex_init(&pthreadMutex, nullptr);
+    pthread_cond_init(&pthreadCond, nullptr);
+
     for (size_t i = 0; i < threads; ++i)
-        workers.emplace_back([this]
-                             { run(); });
+    {
+        pthread_t thread;
+        if (pthread_create(&thread, nullptr, [](void *param) -> void *
+                           {
+                static_cast<ThreadPool *>(param)->run();
+                return nullptr; }, this) != 0)
+        {
+            pthread_mutex_destroy(&pthreadMutex);
+            pthread_cond_destroy(&pthreadCond);
+            throw std::runtime_error("Failed to create thread");
+        }
+        workers.emplace_back(thread);
+    }
+#endif
 }
 
-// Деструктор завершает работу потоков
 ThreadPool::~ThreadPool()
 {
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
     {
-        std::lock_guard<std::mutex> lock(queueMutex);
+        pthread_mutex_lock(&pthreadMutex);
         stop = true;
+        pthread_mutex_unlock(&pthreadMutex);
     }
-    condition.notify_all();
-    for (std::thread &worker : workers)
-        if (worker.joinable())
-            worker.join();
+    pthread_cond_broadcast(&pthreadCond); // Пробуждаем все потоки (POSIX)
+#endif
+
+    for (auto &worker : workers)
+    {
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
+        pthread_join(worker, nullptr);
+#endif
+    }
+
+#if defined(_WIN32) || defined(_WIN64)
+
+#else
+    pthread_mutex_destroy(&pthreadMutex);
+    pthread_cond_destroy(&pthreadCond);
+#endif
 }

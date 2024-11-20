@@ -15,7 +15,7 @@ HEADERS = ThreadPool.hpp
 OBJS = $(SRCS:.cpp=.o)
 
 # Имя исполняемого файла
-TARGET = program.out
+TARGET = program
 
 # Основная цель сборки
 all: $(TARGET)
