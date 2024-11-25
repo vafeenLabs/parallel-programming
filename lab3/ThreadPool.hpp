@@ -50,6 +50,11 @@ private:
     bool stop;
 
 #if defined(_WIN32) || defined(_WIN64)
+    // Для Windows: массив дескрипторов потоков
+    std::vector<HANDLE> workers;
+
+    // Семафор для управления ожиданием задач
+    HANDLE semaphore;
 
 #else
     // Для POSIX: массив идентификаторов потоков pthread
