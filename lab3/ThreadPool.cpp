@@ -5,11 +5,11 @@ void ThreadPool::run()
 #if defined(_WIN32) || defined(_WIN64)
     while (true)
     {
-        // Ожидание задачи с использованием семафора
-        WaitForSingleObject(semaphore, INFINITE);
         std::function<void()> task;
 
         {
+            WaitForSingleObject(semaphore, INFINITE); // Ожидание задачи
+
             std::lock_guard<std::mutex> lock(queueMutex);
             if (stop && tasks.empty())
                 return;
@@ -32,7 +32,7 @@ void ThreadPool::run()
             pthread_mutex_lock(&pthreadMutex);
             while (!stop && tasks.empty())
                 pthread_cond_wait(&pthreadCond, &pthreadMutex);
-            if (stop && tasks.empty()) 
+            if (stop && tasks.empty())
             {
                 pthread_mutex_unlock(&pthreadMutex);
                 return;
@@ -86,19 +86,14 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task)
 ThreadPool::ThreadPool(size_t threads) : stop(false)
 {
 #if defined(_WIN32) || defined(_WIN64)
-    semaphore = CreateSemaphore(nullptr, 0, threads, nullptr);
-    if (!semaphore)
-        throw std::runtime_error("Failed to create semaphore");
-
     for (size_t i = 0; i < threads; ++i)
     {
         HANDLE thread = CreateThread(nullptr, 0, [](LPVOID param) -> DWORD
                                      {
-            static_cast<ThreadPool *>(param)->run();
-            return 0; }, this, 0, nullptr);
+                static_cast<ThreadPool *>(param)->run();
+                return 0; }, this, 0, nullptr);
         if (!thread)
         {
-            CloseHandle(semaphore);
             throw std::runtime_error("Failed to create thread");
         }
         workers.emplace_back(thread);
@@ -127,11 +122,12 @@ ThreadPool::ThreadPool(size_t threads) : stop(false)
 ThreadPool::~ThreadPool()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    stop = true;
+    WaitForMultipleObjects(workers.size(), workers.data(), TRUE, INFINITE); // Ждем завершения всех потоков
+    for (auto &worker : workers)
     {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        stop = true;
+        CloseHandle(worker);
     }
-    ReleaseSemaphore(semaphore, workers.size(), nullptr);
 #else
     {
         pthread_mutex_lock(&pthreadMutex);
@@ -139,21 +135,12 @@ ThreadPool::~ThreadPool()
         pthread_mutex_unlock(&pthreadMutex);
     }
     pthread_cond_broadcast(&pthreadCond); // Пробуждаем все потоки (POSIX)
-#endif
 
     for (auto &worker : workers)
     {
-#if defined(_WIN32) || defined(_WIN64)
-        WaitForSingleObject(worker, INFINITE);
-        CloseHandle(worker);
-#else
         pthread_join(worker, nullptr);
-#endif
     }
 
-#if defined(_WIN32) || defined(_WIN64)
-    CloseHandle(semaphore);
-#else
     pthread_mutex_destroy(&pthreadMutex);
     pthread_cond_destroy(&pthreadCond);
 #endif

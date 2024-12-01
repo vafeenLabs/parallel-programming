@@ -1,5 +1,10 @@
 #include "ThreadPool.hpp"
 
+// Не обращайте на это внимания, у меня setlocale почему-то не работает( Ненавижу Windows
+#if defined(_WIN32) || defined(_WIN64)
+#include <Windows.h>
+#endif
+
 // Функция для расчета числа Фибоначчи
 long long fibonacci(int n)
 {
@@ -27,6 +32,13 @@ void writeToFile(const std::string &filename, const std::string &content)
 
 int main()
 {
+
+    // Не обращайте на это внимания, у меня setlocale почему-то не работает( Ненавижу Windows
+#if defined(_WIN32) || defined(_WIN64)
+    SetConsoleCP(65001);
+    SetConsoleOutputCP(65001);
+#endif
+
     ThreadPool pool;
     int choice;
     bool program = true;

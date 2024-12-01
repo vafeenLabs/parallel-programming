@@ -56,6 +56,9 @@ private:
     // Семафор для управления ожиданием задач
     HANDLE semaphore;
 
+    // Мьютекс для защиты очереди задач
+    std::mutex queueMutex;
+
 #else
     // Для POSIX: массив идентификаторов потоков pthread
     std::vector<pthread_t> workers;
