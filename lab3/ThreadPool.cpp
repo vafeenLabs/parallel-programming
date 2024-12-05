@@ -88,15 +88,15 @@ ThreadPool::ThreadPool(size_t threads) : stop(false)
 #if defined(_WIN32) || defined(_WIN64)
     for (size_t i = 0; i < threads; ++i)
     {
-        HANDLE thread = CreateThread(nullptr, 0, [](LPVOID param) -> DWORD
-                                     {
+        HANDLE thread = (HANDLE)_beginthreadex( nullptr, 0, [](void *param) -> unsigned
+                                    {
                 static_cast<ThreadPool *>(param)->run();
                 return 0; }, this, 0, nullptr);
         if (!thread)
         {
             throw std::runtime_error("Failed to create thread");
         }
-        workers.emplace_back(thread);
+        workers.emplace_back(reinterpret_cast<HANDLE>(thread));
     }
 #else
     pthread_mutex_init(&pthreadMutex, nullptr);
