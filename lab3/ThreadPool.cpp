@@ -96,7 +96,7 @@ ThreadPool::ThreadPool(size_t threads) : stop(false)
         {
             throw std::runtime_error("Failed to create thread");
         }
-        workers.emplace_back(reinterpret_cast<HANDLE>(thread));
+        workers.emplace_back(thread);
     }
 #else
     pthread_mutex_init(&pthreadMutex, nullptr);
