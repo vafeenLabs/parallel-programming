@@ -6,18 +6,28 @@ void ThreadPool::run()
     while (true)
     {
         std::function<void()> task;
-
+        
         {
-            WaitForSingleObject(semaphore, INFINITE); // Ожидание задачи
+            // Ожидаем, пока не появится новая задача в очереди (семафор)
+            WaitForSingleObject(semaphore, INFINITE);
 
-            std::lock_guard<std::mutex> lock(queueMutex);
+            // Блокируем мьютекс, чтобы безопасно работать с очередью задач
+            WaitForSingleObject(winMutex, INFINITE);
+
+            // Если пул завершен и очередь пуста, выходим
             if (stop && tasks.empty())
+            {
+                ReleaseMutex(winMutex); // Освобождаем мьютекс
                 return;
+            }
+
+            // Извлекаем задачу из очереди
             if (!tasks.empty())
             {
                 task = std::move(tasks.front());
                 tasks.pop();
             }
+            ReleaseMutex(winMutex); // Освобождаем мьютекс
         }
 
         if (task)
@@ -29,22 +39,28 @@ void ThreadPool::run()
         std::function<void()> task;
 
         {
+            // Блокируем мьютекс для безопасного доступа к очереди
             pthread_mutex_lock(&pthreadMutex);
+            // Ожидаем появления задачи в очереди, если она пуста
             while (!stop && tasks.empty())
                 pthread_cond_wait(&pthreadCond, &pthreadMutex);
+            // Если пул завершен и очередь пуста, выходим
             if (stop && tasks.empty())
             {
                 pthread_mutex_unlock(&pthreadMutex);
                 return;
             }
+
+            // Извлекаем задачу из очереди
             if (!tasks.empty())
             {
                 task = std::move(tasks.front());
                 tasks.pop();
             }
-            pthread_mutex_unlock(&pthreadMutex);
+            pthread_mutex_unlock(&pthreadMutex); // Освобождаем мьютекс
         }
 
+        // Выполняем задачу
         if (task)
             task();
     }
@@ -57,26 +73,36 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task)
     std::future<void> res = taskPtr->get_future();
 
 #if defined(_WIN32) || defined(_WIN64)
+    // Блокируем мьютекс перед добавлением задачи в очередь
+    WaitForSingleObject(winMutex, INFINITE);
+    // Если пул остановлен
+    if (stop)
     {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        if (stop)
-            throw std::runtime_error("enqueue on stopped ThreadPool");
-        tasks.emplace([taskPtr]()
-                      { (*taskPtr)(); });
+        ReleaseMutex(winMutex); // Освобождаем мьютекс
+        throw std::runtime_error("enqueue on stopped ThreadPool");
     }
+
+    // Добавляем задачу в очередь
+    tasks.emplace([taskPtr]()
+                  { (*taskPtr)(); });
+    ReleaseMutex(winMutex); // Освобождаем мьютекс
+
+    // Уведомляем один поток, что появилась задача
     ReleaseSemaphore(semaphore, 1, nullptr);
+
 #else
+    // Блокируем мьютекс перед добавлением задачи в очередь
+    pthread_mutex_lock(&pthreadMutex);
+    if (stop)
     {
-        pthread_mutex_lock(&pthreadMutex);
-        if (stop)
-        {
-            pthread_mutex_unlock(&pthreadMutex);
-            throw std::runtime_error("enqueue on stopped ThreadPool");
-        }
-        tasks.emplace([taskPtr]()
-                      { (*taskPtr)(); });
         pthread_mutex_unlock(&pthreadMutex);
+        throw std::runtime_error("enqueue on stopped ThreadPool");
     }
+    // Добавляем задачу в очередь
+    tasks.emplace([taskPtr]()
+                  { (*taskPtr)(); });
+    pthread_mutex_unlock(&pthreadMutex); // Освобождаем мьютекс
+    // Пробуждаем один поток для выполнения задачи
     pthread_cond_signal(&pthreadCond);
 #endif
 
@@ -86,33 +112,58 @@ std::future<void> ThreadPool::enqueue(std::function<void()> task)
 ThreadPool::ThreadPool(size_t threads) : stop(false)
 {
 #if defined(_WIN32) || defined(_WIN64)
+    // Создаем семафор для синхронизации потоков
+    semaphore = CreateSemaphore(nullptr, 0, static_cast<LONG>(threads), nullptr);
+    if (!semaphore)
+    {
+        throw std::runtime_error("Failed to create semaphore");
+    }
+
+    // Создаем мьютекс для защиты очереди задач
+    winMutex = CreateMutex(nullptr, FALSE, nullptr);
+    if (!winMutex)
+    {
+        CloseHandle(semaphore);
+        throw std::runtime_error("Failed to create mutex");
+    }
+
+    // Создаем рабочие потоки
     for (size_t i = 0; i < threads; ++i)
     {
-        HANDLE thread = (HANDLE)_beginthreadex( nullptr, 0, [](void *param) -> unsigned
-                                    {
-                static_cast<ThreadPool *>(param)->run();
-                return 0; }, this, 0, nullptr);
+        HANDLE thread = (HANDLE)_beginthreadex(
+            nullptr, 0, [](void *param) -> unsigned
+            {
+                    static_cast<ThreadPool *>(param)->run();
+                    return 0; },
+            this, 0, nullptr);
         if (!thread)
         {
+            CloseHandle(semaphore);
+            CloseHandle(winMutex);
             throw std::runtime_error("Failed to create thread");
         }
         workers.emplace_back(thread);
     }
 #else
+    // Инициализация мьютекса и условной переменной для POSIX
     pthread_mutex_init(&pthreadMutex, nullptr);
     pthread_cond_init(&pthreadCond, nullptr);
 
+    // Создаем рабочие потоки
     for (size_t i = 0; i < threads; ++i)
     {
         pthread_t thread;
-        if (pthread_create(&thread, nullptr, [](void *param) -> void *
-                           {
-                static_cast<ThreadPool *>(param)->run();
-                return nullptr; }, this) != 0)
+        // Тут вернется 0, если поток успешно создан
+        int result = pthread_create(&thread, nullptr, [](void *param) -> void *
+                                    {
+                                            static_cast<ThreadPool *>(param)->run();
+                                            return nullptr; }, this);
+
+        if (result != 0)
         {
             pthread_mutex_destroy(&pthreadMutex);
             pthread_cond_destroy(&pthreadCond);
-            throw std::runtime_error("Failed to create thread");
+            throw std::runtime_error("Failed to create thread: " + std::string(strerror(result)));
         }
         workers.emplace_back(thread);
     }
@@ -123,24 +174,32 @@ ThreadPool::~ThreadPool()
 {
 #if defined(_WIN32) || defined(_WIN64)
     stop = true;
-    WaitForMultipleObjects(workers.size(), workers.data(), TRUE, INFINITE); // Ждем завершения всех потоков
+
+    // Принудительно завершаем все потоки
     for (auto &worker : workers)
     {
+        TerminateThread(worker, 0);
         CloseHandle(worker);
     }
-#else
-    {
-        pthread_mutex_lock(&pthreadMutex);
-        stop = true;
-        pthread_mutex_unlock(&pthreadMutex);
-    }
-    pthread_cond_broadcast(&pthreadCond); // Пробуждаем все потоки (POSIX)
 
+    // Освобождаем ресурсы
+    CloseHandle(semaphore);
+    CloseHandle(winMutex);
+#else
+    // POSIX реализация
+    pthread_mutex_lock(&pthreadMutex);
+    stop = true;
+    pthread_mutex_unlock(&pthreadMutex);
+
+    pthread_cond_broadcast(&pthreadCond); // Пробуждаем потоки
+
+    // Принудительно завершаем потоки
     for (auto &worker : workers)
     {
-        pthread_join(worker, nullptr);
+        pthread_cancel(worker);
     }
 
+    // Освобождаем ресурсы
     pthread_mutex_destroy(&pthreadMutex);
     pthread_cond_destroy(&pthreadCond);
 #endif

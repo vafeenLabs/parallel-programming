@@ -1,18 +1,20 @@
-#pragma once 
+#pragma once
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <queue>
 #include <functional>
 #include <future>
-#include <mutex>
-#include <condition_variable>
 #include <stdexcept>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-#else
+// #include <process.h>
+#elif defined(__linux__) || defined(__unix__)
 #include <pthread.h>
+#include <cstring>
+#else
+#error "The platform is not supported"
 #endif
 
 enum Point
@@ -41,8 +43,8 @@ public:
 
     // Метод для добавления задачи в пул и получения результата через future
     std::future<void> enqueue(std::function<void()> task);
-private:
 
+private:
     void run();
 
     std::queue<std::function<void()>> tasks;
@@ -57,8 +59,7 @@ private:
     HANDLE semaphore;
 
     // Мьютекс для защиты очереди задач
-    std::mutex queueMutex;
-
+    HANDLE winMutex;
 #else
     // Для POSIX: массив идентификаторов потоков pthread
     std::vector<pthread_t> workers;
