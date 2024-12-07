@@ -9,7 +9,6 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-// #include <process.h>
 #elif defined(__linux__) || defined(__unix__)
 #include <pthread.h>
 #include <cstring>
