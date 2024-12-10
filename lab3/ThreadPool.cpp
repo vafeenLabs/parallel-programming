@@ -191,12 +191,21 @@ ThreadPool::ThreadPool(size_t threads) : stop(false)
     }
 #endif
 }
-
 ThreadPool::~ThreadPool()
 {
 #if defined(_WIN32) || defined(_WIN64)
+    // Блокируем мьютекс перед установкой флага stop
+    WaitForSingleObject(winMutex, INFINITE);
     stop = true;
-    // Завершаем все потоки
+    ReleaseMutex(winMutex);
+
+    // Уведомляем все потоки, чтобы они завершились
+    for (size_t i = 0; i < workers.size(); ++i)
+    {
+        ReleaseSemaphore(semaphore, 1, nullptr);
+    }
+
+    // Завершаем все потоки, освобождая ресурсы 
     for (auto &worker : workers)
     {
         CloseHandle(worker);
