@@ -10,7 +10,7 @@ void ThreadPool::run()
             std::unique_lock<std::mutex> lock(queueMutex);
             condition.wait(lock, [this]
                            { return stop || !tasks.empty(); });
-            if (stop && tasks.empty())
+            if (stop || tasks.empty())
                 return;
             if (!tasks.empty())
             {

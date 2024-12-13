@@ -25,7 +25,7 @@ void ThreadPool::run()
             }
 
             // Если пул завершен и очередь пуста, выходим
-            if (stop && tasks.empty())
+            if (stop || tasks.empty())
             {
                 ReleaseMutex(winMutex); // Освобождаем мьютекс
                 return;
@@ -56,7 +56,7 @@ void ThreadPool::run()
             while (!stop && tasks.empty())
                 pthread_cond_wait(&pthreadCond, &pthreadMutex);
             // Если пул завершен и очередь пуста, выходим
-            if (stop && tasks.empty())
+            if (stop || tasks.empty())
             {
                 pthread_mutex_unlock(&pthreadMutex); // Освобождаем мьютекс
                 return;
